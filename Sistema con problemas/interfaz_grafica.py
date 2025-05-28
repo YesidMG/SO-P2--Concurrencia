@@ -47,9 +47,11 @@ class InterfazGrafica:
         self.color_acento = "#E74C3C"
         self.color_exito = "#27AE60"
         self.color_fondo = "#ECF0F1"
+        self.color_solu ="#6ebb71"
         
         estilos_botones = {
-            "Principal.TButton": (self.color_secundario, "#2980B9", "#21618C", (20, 15), 11),
+            "SimulacionProblema.TButton": (self.color_secundario, "#2980B9", "#21618C", (20, 15), 11),
+            "SimulacionSolucion.TButton": (self.color_solu, "#4cc350", "#21618C", (20, 15), 11),
             "Accion.TButton": (self.color_exito, "#229954", "#1E8449", (15, 10), 10),
             "Peligro.TButton": (self.color_acento, "#C0392B", "#A93226", (15, 10), 10)
         }
@@ -161,11 +163,11 @@ class InterfazGrafica:
         
         tk.Label(contenido, text=descripcion, font=("Segoe UI", 8), bg="white", fg="#34495E", justify=tk.CENTER).pack(pady=(0, 15))
         
-        ttk.Button(contenido, text="Iniciar", command=lambda: self.iniciar_simulacion_problema(tipo_problema), style="Principal.TButton").pack()
-        
+        ttk.Button(contenido, text="Iniciar con problemas", command=lambda: self.iniciar_simulacion_problema(tipo_problema, "problema"), style="SimulacionProblema.TButton").pack(pady=(0, 15))
+        ttk.Button(contenido, text="Iniciar Solucionado", command=lambda: self.iniciar_simulacion_problema(tipo_problema, "solucion"), style="SimulacionSolucion.TButton").pack(pady=(0, 15))
+
         widgets = [tarjeta, header, contenido]
         for widget in widgets:
-            widget.bind("<Button-1>", lambda e: self.iniciar_simulacion_problema(tipo_problema))
             widget.bind("<Enter>", on_enter)
             widget.bind("<Leave>", on_leave)
     
@@ -277,7 +279,7 @@ class InterfazGrafica:
         except (tk.TclError, RuntimeError):
             pass
     
-    def iniciar_simulacion_problema(self, tipo_problema):
+    def iniciar_simulacion_problema(self, tipo_problema, tipo_simulacion):
         """
         Inicia la simulación del tipo de problema especificado, configurando
         la interfaz y ejecutando la simulación en un hilo separado.
@@ -298,6 +300,7 @@ class InterfazGrafica:
         
         logging.info("=" * 80)
         logging.info(info_problema[tipo_problema])
+        logging.info(tipo_simulacion)
         logging.info("=" * 80)
         
         self.limpiar_simulacion_anterior()
