@@ -163,8 +163,8 @@ class InterfazGrafica:
         
         tk.Label(contenido, text=descripcion, font=("Segoe UI", 8), bg="white", fg="#34495E", justify=tk.CENTER).pack(pady=(0, 15))
         
-        ttk.Button(contenido, text="Iniciar con problemas", command=lambda: self.iniciar_simulacion_problema(tipo_problema, "problema"), style="SimulacionProblema.TButton").pack(pady=(0, 15))
-        ttk.Button(contenido, text="Iniciar Solucionado", command=lambda: self.iniciar_simulacion_problema(tipo_problema, "solucion"), style="SimulacionSolucion.TButton").pack(pady=(0, 15))
+        ttk.Button(contenido, text="Iniciar con problemas", command=lambda: self.iniciar_simulacion_problema(tipo_problema, solucion=False), style="SimulacionProblema.TButton").pack(pady=(0, 15))
+        ttk.Button(contenido, text="Iniciar Solucionado", command=lambda: self.iniciar_simulacion_problema(tipo_problema, solucion=True), style="SimulacionSolucion.TButton").pack(pady=(0, 15))
 
         widgets = [tarjeta, header, contenido]
         for widget in widgets:
@@ -279,7 +279,7 @@ class InterfazGrafica:
         except (tk.TclError, RuntimeError):
             pass
     
-    def iniciar_simulacion_problema(self, tipo_problema, tipo_simulacion):
+    def iniciar_simulacion_problema(self, tipo_problema, solucion):
         """
         Inicia la simulación del tipo de problema especificado, configurando
         la interfaz y ejecutando la simulación en un hilo separado.
@@ -300,7 +300,7 @@ class InterfazGrafica:
         
         logging.info("=" * 80)
         logging.info(info_problema[tipo_problema])
-        logging.info(tipo_simulacion)
+        logging.info(solucion)
         logging.info("=" * 80)
         
         self.limpiar_simulacion_anterior()
