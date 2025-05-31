@@ -134,7 +134,7 @@ class Estudiante(threading.Thread):
 
             self.recursos_obtenidos.append(recurso)
             self.actualizar_interfaz()
-            time.sleep(0.2)
+            time.sleep(0.2) #Duerme un poco para simular el tiempo de espera al solicitar recursos y no recargar el programa con actualizaciones visuales
     
     def waiting_resources(self):
         """
@@ -158,7 +158,7 @@ class Estudiante(threading.Thread):
         while tiempo_restante > 0:
             self.estado = Estado.TRABAJANDO
             self.actualizar_interfaz()
-            logging.info(f"{self.nombre} trabajando con recursos por quantum")
+            logging.info(f"{self.nombre} trabajando con recursos obtenidos durante un quantum")
             trabajo = min(quantum, tiempo_restante)
             time.sleep(trabajo)
             tiempo_restante -= trabajo
@@ -178,6 +178,7 @@ class Estudiante(threading.Thread):
         """
         for recurso in self.recursos_obtenidos:
             self.sistema.liberar_recurso(self, recurso)
+        self.recursos_obtenidos.clear()
 
     def obtaining_resources_again(self):
         """

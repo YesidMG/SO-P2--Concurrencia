@@ -80,10 +80,10 @@ class SistemaGestionRecursos:
             recurso.estudiante_id = None
             logging.info(f"{estudiante.nombre} liberó {recurso}")
             
-            if not self.cola_espera[recurso].empty():
-                estudiante_esperando = self.cola_espera[recurso].get()
-                logging.info(f"{estudiante_esperando.nombre} podría obtener {recurso} ahora")
-            
+            if not self.inanition_solution_enabled: #Se evita el interbloqueo si la solución de inanición está habilitada
+                if not self.cola_espera[recurso].empty():   #Esto puede ocasionar un interbloqueo porque elimina el primer estudiante de la cola(El siguiente en obtener el recurso) sin embargo, no se le asigna el recurso inmediatamente, esto puede ocasionar que nunca se le asigne el recurso 
+                    estudiante_esperando = self.cola_espera[recurso].get()
+                    logging.info(f"{estudiante_esperando.nombre} podría obtener {recurso} ahora")
             recurso.lock.release()
             self.actualizar_interfaz()
     
