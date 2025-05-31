@@ -18,6 +18,7 @@ class SistemaGestionRecursos:
         self.cola_espera = {}
         self.lock_sistema = threading.Lock()
         self.interfaz = None
+        self.inanition_solution_enabled = False  # ← AGREGA ESTA LÍNEA
     
     def inicializar_recursos(self):
         """
