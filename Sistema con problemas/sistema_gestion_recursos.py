@@ -3,7 +3,7 @@ import time
 import random
 import queue
 import logging
-from enums import TipoRecurso
+from enums import TipoRecurso, Estado
 from recurso import Recurso
 from estudiante import Estudiante
 
@@ -42,7 +42,7 @@ class SistemaGestionRecursos:
         Intenta que un estudiante obtenga un recurso específico del sistema,
         implementando lógicas de prioridad y condiciones de carrera problemáticas.
         """
-        if self.inanition_solution_enabled: # Obtiene el recurso con la solución de inanición si esta habilitada
+        if self.inanition_solution_enabled: 
             return self.get_resource_with_inanition_solution(estudiante, recurso)
         else:
             if not recurso.en_uso:
@@ -50,7 +50,9 @@ class SistemaGestionRecursos:
                 
                 for est_en_espera in cola_actual:
                     if est_en_espera.id < estudiante.id:
-                        self.cola_espera[recurso].put(estudiante)
+                        if estudiante not in self.cola_espera[recurso].queue:
+                            self.cola_espera[recurso].put(estudiante)
+                            logging.info(f"{estudiante.nombre} agregado a cola de espera para {recurso}")
                         logging.info(f"{estudiante.nombre} debe esperar - hay estudiantes prioritarios")
                         return False
                     
@@ -160,6 +162,27 @@ class SistemaGestionRecursos:
             estudiante.start()
             time.sleep(0.2)
     
+    def iniciar_simulacion_interbloqueo_solucionada(self, num_estudiantes=4):
+        """
+        Simula el problema de interbloqueo pero forzando a todos los estudiantes
+        a solicitar los recursos en el mismo orden (por tipo y luego por id), evitando el deadlock.
+        Los recursos asignados a cada estudiante son los mismos que en la versión problemática.
+        """
+        logging.info("Iniciando simulación de INTERBLOQUEO (SOLUCIONADO: orden en adquisición de locks)")
+        self.estudiantes.clear()
+        recursos_estudiantes = [
+            [self.recursos[0], self.recursos[3]],
+            [self.recursos[3], self.recursos[0]],
+            [self.recursos[1], self.recursos[2]],
+            [self.recursos[2], self.recursos[1]],
+        ]
+        for i in range(num_estudiantes):
+            recursos_ordenados = sorted(recursos_estudiantes[i], key=lambda r: (r.tipo.value, r.id))
+            estudiante = Estudiante(i+1, self, recursos_ordenados, self.interfaz, tiempo_trabajo=8)
+            self.estudiantes.append(estudiante)
+        for estudiante in self.estudiantes:
+            estudiante.start()
+    
     def iniciar_simulacion_inanicion(self, solution_enabled, num_estudiantes=6):
         """
         Inicia una simulación diseñada para crear inanición de recursos,
@@ -201,6 +224,30 @@ class SistemaGestionRecursos:
         for estudiante in self.estudiantes:
             estudiante.start()
     
+    def iniciar_simulacion_condiciones_carrera_solucionada(self, num_estudiantes=5):
+        """
+        Simula condiciones de carrera usando un semáforo para evitar inconsistencias.
+        Primero muestra a todos los estudiantes en la interfaz en estado ESPERANDO, luego inicia la simulación.
+        """
+        import time 
+        logging.info("Iniciando simulación de CONDICIONES DE CARRERA (SOLUCIONADA CON SEMÁFORO)")
+        self.semaforo_carrera = threading.Semaphore(1)
+        self.estudiantes.clear()
+        recursos = [self.recursos[0], self.recursos[1]]
+
+        for i in range(1, num_estudiantes + 1):
+            estudiante = Estudiante(i, self, recursos, self.interfaz, tiempo_trabajo=random.randint(2, 5))
+            estudiante.usar_semaforo_carrera = True
+            estudiante.estado = Estado.ESPERANDO
+            self.estudiantes.append(estudiante)
+            if self.interfaz:
+                self.interfaz.actualizar_estudiante(estudiante)
+        if self.interfaz:
+            self.interfaz.root.update_idletasks()
+            time.sleep(0.5)
+        for estudiante in self.estudiantes:
+            estudiante.start()
+    
     def get_resource_with_inanition_solution(self, estudiante, recurso):
         """
         Intenta que un estudiante obtenga un recurso utilizando una solución de inanición, esta solución consta de lo siguiente:
@@ -234,3 +281,23 @@ class SistemaGestionRecursos:
             return True
         else:
             return False
+    
+    def definir_simulacion_condicion_carrera(self, solucion, num_estudiantes=5):
+        """
+        Decide qué simulación de condiciones de carrera ejecutar según el parámetro 'solucion'.
+        """
+        if solucion:
+            self.iniciar_simulacion_condiciones_carrera_solucionada(num_estudiantes)
+            return
+        else:
+            self.iniciar_simulacion_condiciones_carrera(num_estudiantes)
+            return
+    
+    def definir_simulacion_interbloqueo(self, solucion, num_estudiantes=4):
+        """
+        Decide qué simulación de interbloqueo ejecutar según el parámetro 'solucion'.
+        """
+        if solucion:
+            self.iniciar_simulacion_interbloqueo_solucionada(num_estudiantes)
+        else:
+            self.iniciar_simulacion_interbloqueo(num_estudiantes)

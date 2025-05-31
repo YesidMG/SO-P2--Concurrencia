@@ -20,55 +20,31 @@ class Estudiante(threading.Thread):
         self.tiempo_trabajo = tiempo_trabajo  
         self.tiempo_espera = 0  
         self.inanition_solution_enabled = False
+        self.usar_semaforo_carrera = False  
     
     def run(self):
         """
         Ejecuta el ciclo de vida completo del estudiante: solicitar recursos,
         trabajar con ellos y liberarlos al finalizar, manejando errores y limpieza.
         """
-        
         try:
             if self.inanition_solution_enabled:
                 self.run_round_robin_inanition_solution()
-            else:
-                self.estado = Estado.ESPERANDO
-                self.actualizar_interfaz()
-                logging.info(f"{self.nombre} comienza a solicitar recursos: {[str(r) for r in self.recursos_necesarios]}")
-
+            elif getattr(self, 'usar_semaforo_carrera', False):
+                
                 waiting_begin = time.time()
-                for recurso in self.recursos_necesarios:
-                    if hasattr(self.interfaz, 'simulacion_activa') and not self.interfaz.simulacion_activa:
-                        logging.info(f"{self.nombre} terminando por cierre de aplicación")
-                        return
-                        
-                    while not self.sistema.obtener_recurso(self, recurso):
-                        if hasattr(self.interfaz, 'simulacion_activa') and not self.interfaz.simulacion_activa:
-                            logging.info(f"{self.nombre} terminando por cierre de aplicación")
-                            return
-                            
-                        time.sleep(0.1)
-                        self.tiempo_espera += 0.1
-                    
-                    self.recursos_obtenidos.append(recurso)
+                while True:
+                    acquired = self.sistema.semaforo_carrera.acquire(blocking=False)
+                    if acquired:
+                        break
+                    time.sleep(0.1)
+                    self.tiempo_espera += 0.1
                     self.actualizar_interfaz()
-                    time.sleep(0.2) 
-                
-                waiting_end = time.time()
-                waiting_total_time = waiting_end - waiting_begin
-
-                self.estado = Estado.TRABAJANDO
-                self.actualizar_interfaz()
-                logging.info(f"{self.nombre} comienza a trabajar con los recursos obtenidos")
-                time.sleep(self.tiempo_trabajo)
-
-                for recurso in self.recursos_obtenidos:
-                    self.sistema.liberar_recurso(self, recurso)
-                
-                self.recursos_obtenidos.clear()
-                self.estado = Estado.FINALIZADO
-                self.actualizar_interfaz()
-                logging.info(f"{self.nombre} ha finalizado su trabajo. Tiempo de espera: {waiting_total_time:.2f}s")
-
+                    
+                self._ejecutar_trabajo()
+                self.sistema.semaforo_carrera.release()
+            else:
+                self._ejecutar_trabajo()
         except Exception as e:
             logging.error(f"Error en {self.nombre}: {e}")
         finally:
@@ -77,7 +53,45 @@ class Estudiante(threading.Thread):
                     self.sistema.liberar_recurso(self, recurso)
                 except:
                     pass
-    
+
+    def _ejecutar_trabajo(self):
+        """
+        Ejecuta el trabajo del estudiante, solicitando recursos, trabajando con ellos y liberándolos al finalizar.
+        """
+        self.estado = Estado.ESPERANDO
+        self.actualizar_interfaz()
+        logging.info(f"{self.nombre} comienza a solicitar recursos: {[str(r) for r in self.recursos_necesarios]}")
+        waiting_begin = time.time()
+        for recurso in self.recursos_necesarios:
+            if hasattr(self.interfaz, 'simulacion_activa') and not self.interfaz.simulacion_activa:
+                logging.info(f"{self.nombre} terminando por cierre de aplicación")
+                return
+            while not self.sistema.obtener_recurso(self, recurso):
+                if hasattr(self.interfaz, 'simulacion_activa') and not self.interfaz.simulacion_activa:
+                    logging.info(f"{self.nombre} terminando por cierre de aplicación")
+                    return
+                time.sleep(0.1)
+                self.tiempo_espera += 0.1
+                self.actualizar_interfaz()
+            self.recursos_obtenidos.append(recurso)
+            self.actualizar_interfaz()
+            time.sleep(0.2)
+        waiting_end = time.time()
+        waiting_total_time = waiting_end - waiting_begin
+
+        self.estado = Estado.TRABAJANDO
+        self.actualizar_interfaz()
+        logging.info(f"{self.nombre} comienza a trabajar con los recursos obtenidos")
+        time.sleep(self.tiempo_trabajo)
+
+        for recurso in self.recursos_obtenidos:
+            self.sistema.liberar_recurso(self, recurso)
+
+        self.recursos_obtenidos.clear()
+        self.estado = Estado.FINALIZADO
+        self.actualizar_interfaz()
+        logging.info(f"{self.nombre} ha finalizado su trabajo. Tiempo de espera: {waiting_total_time:.2f}s")
+
     def actualizar_interfaz(self):
         """
         Actualiza la representación visual del estudiante en la interfaz gráfica,
@@ -210,3 +224,17 @@ class Estudiante(threading.Thread):
         mostrando su nombre para identificación en logs y depuración.
         """
         return self.nombre
+
+    def iniciar_simulacion_interbloqueo_solucionada(self, num_estudiantes=4):
+        """
+        Simula el problema de interbloqueo pero forzando a todos los estudiantes
+        a solicitar los recursos SIEMPRE en el mismo orden, evitando el deadlock.
+        """
+        logging.info("Iniciando simulación de INTERBLOQUEO (SOLUCIONADO: orden en adquisición de locks)")
+        self.estudiantes.clear()
+        recursos_ordenados = sorted(self.recursos, key=lambda r: (r.tipo.value, r.id))
+        for i in range(1, num_estudiantes + 1):
+            estudiante = Estudiante(i, self, recursos_ordenados[:2], self.interfaz, tiempo_trabajo=8)
+            self.estudiantes.append(estudiante)
+        for estudiante in self.estudiantes:
+            estudiante.start()

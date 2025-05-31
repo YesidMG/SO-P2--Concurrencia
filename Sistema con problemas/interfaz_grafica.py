@@ -318,9 +318,9 @@ class InterfazGrafica:
         """
         try:
             simulaciones = {
-                "interbloqueo": lambda: self.sistema.iniciar_simulacion_interbloqueo(num_estudiantes=4),
+                "interbloqueo": lambda: self.sistema.definir_simulacion_interbloqueo(solucion, num_estudiantes=4),
                 "inanicion": lambda: self.sistema.iniciar_simulacion_inanicion(solucion, num_estudiantes=6),
-                "condiciones_carrera": lambda: self.sistema.iniciar_simulacion_condiciones_carrera(num_estudiantes=5)
+                "condiciones_carrera": lambda: self.sistema.definir_simulacion_condicion_carrera(solucion, num_estudiantes=5)
             }
             
             simulaciones[tipo_problema]()
