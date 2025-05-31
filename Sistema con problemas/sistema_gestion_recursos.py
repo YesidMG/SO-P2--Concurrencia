@@ -211,16 +211,17 @@ class SistemaGestionRecursos:
     def iniciar_simulacion_condiciones_carrera(self, num_estudiantes=5):
         """
         Inicia una simulación diseñada para crear condiciones de carrera,
-        configurando múltiples estudiantes compitiendo simultáneamente por recursos.
+        configurando múltiples estudiantes compitiendo simultáneamente por los mismos recursos.
         """
-        logging.info("Iniciando simulación de CONDICIONES DE CARRERA")
-        
+        logging.info("Iniciando simulación de CONDICIONES DE CARRERA (PROBLEMA FORZADO)")
+        self.estudiantes.clear()
+        recursos = [self.recursos[0], self.recursos[1]]  # Todos usan los mismos recursos
+
         for i in range(1, num_estudiantes + 1):
-            recursos_necesarios = [self.recursos[0], self.recursos[1]]
-            tiempo_trabajo = random.randint(2, 5)
-            estudiante = Estudiante(i, self, recursos_necesarios, self.interfaz, tiempo_trabajo)
+            estudiante = Estudiante(i, self, recursos, self.interfaz, tiempo_trabajo=random.randint(2, 5))
             self.estudiantes.append(estudiante)
-        
+
+        # Lanzar todos los hilos casi al mismo tiempo (sin sleep)
         for estudiante in self.estudiantes:
             estudiante.start()
     
