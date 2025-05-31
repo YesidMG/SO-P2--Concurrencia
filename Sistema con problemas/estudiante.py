@@ -23,8 +23,8 @@ class Estudiante(threading.Thread):
     
     def run(self):
         """
-        Ejecuta el ciclo de vida completo del estudiante usando Round Robin:
-        solicita recursos, trabaja por quanta y libera recursos temporalmente si no termina.
+        Ejecuta el ciclo de vida completo del estudiante: solicitar recursos,
+        trabajar con ellos y liberarlos al finalizar, manejando errores y limpieza.
         """
         
         try:
