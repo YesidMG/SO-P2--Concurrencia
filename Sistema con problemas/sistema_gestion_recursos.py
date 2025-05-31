@@ -41,30 +41,33 @@ class SistemaGestionRecursos:
         Intenta que un estudiante obtenga un recurso específico del sistema,
         implementando lógicas de prioridad y condiciones de carrera problemáticas.
         """
-        if not recurso.en_uso:
-            cola_actual = list(self.cola_espera[recurso].queue)
-            
-            for est_en_espera in cola_actual:
-                if est_en_espera.id < estudiante.id:
-                    self.cola_espera[recurso].put(estudiante)
-                    logging.info(f"{estudiante.nombre} debe esperar - hay estudiantes prioritarios")
-                    return False
-                
-            time.sleep(0.01)
-            
-            if recurso.lock.acquire(blocking=False):
-                recurso.en_uso = True
-                recurso.estudiante_id = estudiante.id
-                logging.info(f"{estudiante.nombre} obtuvo {recurso}")
-                self.actualizar_interfaz()
-                return True
-            else:
-                return False
+        if self.inanition_solution_enabled: # Obtiene el recurso con la solución de inanición si esta habilitada
+            return self.get_resource_with_inanition_solution(estudiante, recurso)
         else:
-            if estudiante not in list(self.cola_espera[recurso].queue):
-                self.cola_espera[recurso].put(estudiante)
-                logging.info(f"{estudiante.nombre} agregado a cola de espera para {recurso}")
-            return False
+            if not recurso.en_uso:
+                cola_actual = list(self.cola_espera[recurso].queue)
+                
+                for est_en_espera in cola_actual:
+                    if est_en_espera.id < estudiante.id:
+                        self.cola_espera[recurso].put(estudiante)
+                        logging.info(f"{estudiante.nombre} debe esperar - hay estudiantes prioritarios")
+                        return False
+                    
+                time.sleep(0.01)
+                
+                if recurso.lock.acquire(blocking=False):
+                    recurso.en_uso = True
+                    recurso.estudiante_id = estudiante.id
+                    logging.info(f"{estudiante.nombre} obtuvo {recurso}")
+                    self.actualizar_interfaz()
+                    return True
+                else:
+                    return False
+            else:
+                if estudiante not in list(self.cola_espera[recurso].queue):
+                    self.cola_espera[recurso].put(estudiante)
+                    logging.info(f"{estudiante.nombre} agregado a cola de espera para {recurso}")
+                return False
     
     def liberar_recurso(self, estudiante, recurso):
         """
@@ -156,13 +159,13 @@ class SistemaGestionRecursos:
             estudiante.start()
             time.sleep(0.2)
     
-    def iniciar_simulacion_inanicion(self, num_estudiantes=6):
+    def iniciar_simulacion_inanicion(self, solution_enabled, num_estudiantes=6):
         """
         Inicia una simulación diseñada para crear inanición de recursos,
         configurando estudiantes con diferentes prioridades y tiempos de trabajo.
         """
         logging.info("Iniciando simulación de INANICIÓN")
-        
+        self.inanition_solution_enabled = solution_enabled  # Habilita o deshabilita la solución de inanición
         for i in range(1, 4):
             recursos_necesarios = [self.recursos[0], self.recursos[1]]
             tiempo_trabajo = 15
@@ -176,6 +179,8 @@ class SistemaGestionRecursos:
             self.estudiantes.append(estudiante)
         
         for estudiante in self.estudiantes:
+            if self.inanition_solution_enabled: # Habilita la solución de inanición si está configurada
+                estudiante.inanition_solution_is_enabled(True)
             estudiante.start()
             time.sleep(0.1)
     
@@ -194,3 +199,37 @@ class SistemaGestionRecursos:
         
         for estudiante in self.estudiantes:
             estudiante.start()
+    
+    def get_resource_with_inanition_solution(self, estudiante, recurso):
+        """
+        Intenta que un estudiante obtenga un recurso utilizando una solución de inanición, esta solución consta de lo siguiente:
+        - Si el estudiante no está en la cola de espera de un recurso, agrega el estudiante a la cola.
+        - Solo el primer estudiante en la cola puede intentar obtener el recurso(Evidentemente).
+        - Una vez que el estudiante obtiene el recurso(adquiere), se marca el recurso como 'en uso', es decir le pone un candado 
+        que impide que otros estudiantes adquieran el recurso en el mismo instante y actualiza el estado del recurso.
+        Args:
+            estudiante (Estudiante): el estudiante que intenta obtener el recurso
+            recurso (Recurso): el recurso que se intenta obtener
+
+        Returns:
+            Boolean: True si el estudiante obtiene el recurso satisfactoriamente, False en caso contrario.
+        """
+        
+        # Verifica si el estudiante ya esta en la cola, si no lo esta, entonces lo añade en la ultima posición.
+        if estudiante not in list(self.cola_espera[recurso].queue):
+            self.cola_espera[recurso].put(estudiante)
+            logging.info(f"{estudiante.nombre} agregado a cola de espera para {recurso}")
+
+        # Solo el primero en la cola puede intentar obtener el recurso
+        if self.cola_espera[recurso].queue[0] != estudiante:
+            return False
+
+        if not recurso.en_uso and recurso.lock.acquire(blocking=False):
+            recurso.en_uso = True
+            recurso.estudiante_id = estudiante.id
+            logging.info(f"{estudiante.nombre} obtuvo {recurso}")
+            self.cola_espera[recurso].get()  # Sale de la cola
+            self.actualizar_interfaz()
+            return True
+        else:
+            return False

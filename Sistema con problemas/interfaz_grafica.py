@@ -309,9 +309,9 @@ class InterfazGrafica:
         self.sistema.inicializar_recursos()
         self.inicializar_vista_recursos()
         
-        threading.Thread(target=self.ejecutar_simulacion_problema, args=(tipo_problema,), daemon=True).start()
+        threading.Thread(target=self.ejecutar_simulacion_problema, args=(tipo_problema, solucion), daemon=True).start()
     
-    def ejecutar_simulacion_problema(self, tipo_problema):
+    def ejecutar_simulacion_problema(self, tipo_problema, solucion):
         """
         Ejecuta la simulación del problema especificado en un hilo separado,
         gestionando errores y finalizando correctamente la simulación.
@@ -319,7 +319,7 @@ class InterfazGrafica:
         try:
             simulaciones = {
                 "interbloqueo": lambda: self.sistema.iniciar_simulacion_interbloqueo(num_estudiantes=4),
-                "inanicion": lambda: self.sistema.iniciar_simulacion_inanicion(num_estudiantes=6),
+                "inanicion": lambda: self.sistema.iniciar_simulacion_inanicion(solucion, num_estudiantes=6),
                 "condiciones_carrera": lambda: self.sistema.iniciar_simulacion_condiciones_carrera(num_estudiantes=5)
             }
             
